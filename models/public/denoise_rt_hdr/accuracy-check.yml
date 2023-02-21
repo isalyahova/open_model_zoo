@@ -1,0 +1,27 @@
+models:
+  - name: denoise-render-hdr
+
+    launchers:
+      - framework: openvino
+        adapter:
+          type: denoise_rt
+        inputs:
+            -   name: "color"
+                type: INPUT
+                value: ".*_color.exr"
+
+    datasets:
+      - name: tungsten_dataset
+        preprocessing:
+          - type: autoexposure
+            key: 0.18
+            k: 16
+          - type: pu_transfer_function
+        postprocessing:
+          - type: pu_inverse_transfer_function
+          - type: autoexposure
+            key: 0.18
+            k: 16
+        metrics:
+          - type: ssim
+            presenter: print_vector

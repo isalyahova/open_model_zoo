@@ -71,15 +71,20 @@ class TungstenAnnotationConverter(BaseFormatConverter):
                 path_target = scene_path / self.target_subfolder
                 num_images = len(list(Path(path_data).rglob(r'*_color.{}'.format(self.extension))))
                 for idx in range(num_images):
-                    color = path_data / f'{idx}_color.{self.extension}'
-                    albedo = path_data / f'{idx}_albedo.{self.extension}'
+                    features = []
+                    if 'color' in self.features:
+                        color = path_data / f'{idx}_color.{self.extension}'
+                        features.append(str(color))
+                    if 'albedo' in self.features:
+                        albedo = path_data / f'{idx}_albedo.{self.extension}'
+                        features.append(str(albedo))
                     target = path_target / f'{idx}_color.{self.extension}'
                     if check_content:
-                        if not check_file_existence(color):
+                        if 'color' in self.features and not check_file_existence(color):
                             content_errors.append(f'{color}: does not exist')
-                        if not check_file_existence(albedo):
+                        if 'albedo' in self.features and not check_file_existence(albedo):
                             content_errors.append(f'{albedo}: does not exist')
-                    annotations.append(ImageProcessingAnnotation([str(color), str(albedo)], str(target),
+                    annotations.append(ImageProcessingAnnotation(features, str(target),
                                                                  gt_loader=self.annotation_loader))
 
         return ConverterReturn(annotations, self.get_meta(), content_errors)

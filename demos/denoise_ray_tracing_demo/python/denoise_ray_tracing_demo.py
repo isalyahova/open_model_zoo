@@ -38,9 +38,9 @@ def build_argparser():
                       help='Show this help message and exit.')
     args.add_argument("-m", "--model", type=Path, required=True,
                       help="Required. Path to an .xml file with a trained model.")
-    args.add_argument("--input_hdr", type=Path, required=True,
+    args.add_argument("--input_hdr", type=Path,
                       help="Required. Path to an HDR image to infer")
-    args.add_argument("--input_albedo", type=Path, required=True,
+    args.add_argument("--input_albedo", type=Path,
                       help="Required. Path to an albedo image to infer")
     args.add_argument("-d", "--device", type=str, default="CPU",
                       help="Optional. Specify the target device to infer on. "
@@ -82,15 +82,18 @@ def load_image(filename):
 
 
 def load_image_features(cfg):
-    color = load_image(cfg.input_hdr)
-    albedo = load_image(cfg.input_albedo)
-    images = {"color": color, "albedo": albedo}
+    images = {}
+    if cfg.input_hdr:
+        color = load_image(cfg.input_hdr)
+        images["color"] = color
+    if cfg.input_albedo:
+        albedo = load_image(cfg.input_albedo)
+        images["albedo"] = albedo
     return images
 
 
 def preprocess_input(images, args):
     color = images["color"]
-    albedo = images["albedo"]
 
     exposure = autoexposure(color)
     transfer = get_transfer_function()
@@ -106,11 +109,15 @@ def preprocess_input(images, args):
     shape = color.shape
     color = pad_image(color, shape)
 
-    albedo = np.expand_dims(albedo.transpose((2, 0, 1)), 0)
-    albedo = pad_image(albedo, shape)
+    features = {"color": color}
+
+    if args.input_albedo:
+        albedo = images["albedo"]
+        albedo = np.expand_dims(albedo.transpose((2, 0, 1)), 0)
+        albedo = pad_image(albedo, shape)
+        features["albedo"] = albedo
 
     params = {"exposure": exposure, "transfer": transfer, "shape": shape}
-    features = {"color": color, "albedo": albedo}
     return features, params
 
 
@@ -166,8 +173,7 @@ def main():
 
     # Start sync inference
     inference_start_time = perf_counter()
-    infer_request.infer(inputs={input_tensor_names[0]: input_image[input_tensor_names[0]],
-                                input_tensor_names[1]: input_image[input_tensor_names[1]]})
+    infer_request.infer(inputs={input_tensor_names[0]: input_image[input_tensor_names[0]]}) # ,input_tensor_names[1]: input_image[input_tensor_names[1]]
     preds = infer_request.get_tensor(output_tensor_name).data[:]
     inference_total_time = perf_counter() - inference_start_time
 
